@@ -19,12 +19,12 @@
 
 typedef struct iphdr iphdr_t;
 typedef struct __attribute__((__packed__)) __icmphdr {
-  uint8_t type;
-  uint8_t code;
-  uint16_t checksum;
-  uint8_t unused_0;
-  uint8_t length; // length of orig payload, in 32-bit words.
-  uint16_t unused_1;
+    uint8_t type;
+    uint8_t code;
+    uint16_t checksum;
+    uint8_t unused_0;
+    uint8_t length; // length of orig payload, in 32-bit words.
+    uint16_t unused_1;
 } icmphdr_t;
 
 typedef struct __attribute__((__packed__)) __label {
