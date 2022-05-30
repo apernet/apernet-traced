@@ -13,6 +13,7 @@
 
 #define EBUFOSZ 1
 #define EBUFISZ 2
+#define EPARSE 3
 
 #define ICMP_EXTYPE_MPLS_LSTACK 1
 #define MPLS_LSTACK_CTYPE_INCOMING_STACK 1
@@ -27,14 +28,9 @@ typedef struct __attribute__((__packed__)) __icmphdr {
     uint16_t unused_1;
 } icmphdr_t;
 
-typedef struct __attribute__((__packed__)) __label {
-    uint32_t label: 24;
-    uint8_t ttl;
-} label_t;
-
 typedef struct __stack {
-    label_t *label;
-    label_t *next;
+    uint32_t value;
+    struct __stack *next;
 } stack_t;
 
 typedef struct hop {
@@ -75,7 +71,7 @@ ssize_t build_rfc4950(const stack_t* stack, uint8_t *buffer, size_t bufsz);
  * @param outsz buffer size.
  * @return ssize_t  bytes written (postive), zero (noting to reply), or error code (negative).
  */
-ssize_t build_reply(const hop_t *hops[], size_t nhops, const uint8_t* inpkt, size_t insz, uint8_t *outpkt, size_t outsz);
+ssize_t build_reply(const hop_t *hops, size_t nhops, const uint8_t* inpkt, size_t insz, uint8_t *outpkt, size_t outsz);
 
 /**
  * @brief destroy hop struct.
@@ -88,10 +84,10 @@ void destroy_hop(hop_t *hop[]);
  * @brief load hop configuration from file.
  * 
  * @param config_file path to the config file to load hops from.
- * @param hops ptr to hop[]; hops. destroy with destroy_hop() when done working with it.
+ * @param hops ptr to array of hop; hops. destroy with destroy_hop() when done working with it.
  * @param nhops ptr to size_t; will store number of hops defined.
  * @return int zero on success, negative on error.
  */
-int load_config(const char *config_file, hop_t *hops[], size_t *nhops);
+int load_config(const char *config_file, hop_t **hops, size_t *nhops);
 
 #endif // APERNET_TRACE_H

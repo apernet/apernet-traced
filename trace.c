@@ -1,5 +1,10 @@
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <arpa/inet.h>
 #include "trace.h"
+#include "log.h"
 
 ssize_t build_rfc4950(const stack_t* stack, uint8_t *buffer, size_t bufsz) {
     uint8_t *ptr = buffer;
@@ -31,20 +36,23 @@ ssize_t build_rfc4950(const stack_t* stack, uint8_t *buffer, size_t bufsz) {
     const stack_t *s = stack;
 
     while (s != NULL) {
-        if ((ptr - buffer) + sizeof(label_t) > bufsz) {
+        if ((ptr - buffer) + sizeof(s->value) > bufsz) {
             return -EBUFOSZ;
         }
 
-        memcpy(ptr, s->label, sizeof(label_t));
-        ptr += sizeof(label_t);
+        memcpy(ptr, &(s->value), sizeof(s->value));
+        ptr += sizeof(s->value);
 
         s = s->next;
+        ++lse_count;
     }
+
+    objhdr->length = sizeof(icmp_ext_obj_hdr_t) + lse_count * sizeof(uint32_t);
 
     return (ptr - buffer);
 }
 
-ssize_t build_reply(const hop_t *hops[], size_t nhops, const uint8_t* inpkt, size_t insz, uint8_t *outpkt, size_t outsz) {
+ssize_t build_reply(const hop_t *hops, size_t nhops, const uint8_t* inpkt, size_t insz, uint8_t *outpkt, size_t outsz) {
     uint8_t *optr = outpkt;
     const uint8_t *iptr = inpkt;
 
@@ -54,11 +62,11 @@ ssize_t build_reply(const hop_t *hops[], size_t nhops, const uint8_t* inpkt, siz
         return -EBUFISZ;
     }
 
-    if (ihdr->ttl - 1 > nhops) {
+    if ((size_t) (ihdr->ttl - 1) > nhops) {
         return 0;
     }
 
-    const hop_t *hop = hops[ihdr->ttl - 1];
+    const hop_t *hop = &(hops[ihdr->ttl - 1]);
 
     iphdr_t *ohdr = (iphdr_t *) optr;
     
@@ -91,7 +99,7 @@ ssize_t build_reply(const hop_t *hops[], size_t nhops, const uint8_t* inpkt, siz
 
     optr += sizeof(icmphdr_t);
 
-    if ((optr - outpkt) + 4 * ORIG_PAYLOAD_SZ > outsz) {
+    if ((size_t) ((optr - outpkt) + 4 * ORIG_PAYLOAD_SZ) > outsz) {
         return -EBUFOSZ;
     }
 
@@ -108,4 +116,79 @@ ssize_t build_reply(const hop_t *hops[], size_t nhops, const uint8_t* inpkt, siz
     optr += rfc4950_len;
 
     return (optr - outpkt);
+}
+
+int load_config(const char *config_file, hop_t **hops, size_t *nhops) {
+    size_t ln = 0;
+    int ret = 0;
+
+    FILE *file = fopen(config_file, "r");
+
+    if (file == NULL) {
+        log_fatal("failed opening '%s': %s\n", config_file, strerror(errno));
+        return -errno - 100;
+    }
+
+    char *addr = (char *) malloc(INET_ADDRSTRLEN);
+    char *stacksdef = (char *) malloc(2048);
+    
+    hop_t *_hops = calloc(255, sizeof(hop_t));
+    size_t _nhops = 0;
+
+    *hops = _hops;
+    
+    while (fscanf(file, "%16s %2048s\n", addr, stacksdef) == 2) {
+        log_debug("input hop %zu: %s, input stack: %s\n", ln, addr, stacksdef);
+        
+        ++ln;
+        stack_t *prev = NULL, *head = NULL;
+
+        uint32_t label;
+        uint8_t exp;
+        uint8_t s;
+        uint8_t ttl;
+
+        char *saveptr = NULL, *stackdef = NULL;
+
+        for (stackdef = strtok_r(stacksdef, ",", &saveptr); ; stackdef = strtok_r(NULL, ",", &saveptr)) {
+            if (stackdef == NULL) {
+                if (head == NULL) {
+                    ret = -EPARSE;
+                    goto end;
+                }
+
+                break;
+            }
+
+            sscanf(stackdef, "%u:%hhu:%hhu:%hhu", &label, &exp, &s, &ttl);
+
+            stack_t *stack = (stack_t *) malloc(sizeof(stack_t));
+            stack->value = htonl(label) | exp << 9 | s << 8 | ttl;
+            stack->next = NULL;
+
+            if (head == NULL) {
+                head = stack;
+            }
+
+            if (prev != NULL) {
+                prev->next = stack;
+            }
+
+            log_debug("adding stack: l: %u, exp: %hhu, s: %hhu, ttl: %hhu; compuate val: %u\n", label, exp, s, ttl, stack->value);
+
+            prev = stack;
+        }
+
+        _hops[_nhops].address = inet_addr(addr);
+        _hops[_nhops].stack = head;
+        ++_nhops;
+    }
+
+    *nhops = _nhops;
+
+end:
+    free(addr);
+    free(stacksdef);
+    fclose(file);
+    return ret;
 }
