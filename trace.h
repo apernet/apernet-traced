@@ -6,7 +6,7 @@
 #include <netinet/ip_icmp.h>
 
 // number of 32-bit words to take from orig packet.
-#define ORIG_PAYLOAD_SZ 8
+#define ORIG_PAYLOAD_SZ 32
 
 // TTL for outgoing packets
 #define OUTPKT_TTL 64
@@ -37,12 +37,6 @@ typedef struct hop {
     uint32_t address;
     stack_t *stack;
 } hop_t;
-
-typedef struct __attribute__((__packed__)) __icmp_ext_hdr {
-    uint8_t ver: 4;
-    uint16_t reserved: 12;
-    uint16_t cksum;
-} icmp_ext_hdr_t;
 
 typedef struct __attribute__((__packed__)) __icmp_ext_obj_hdr {
     uint16_t length;
@@ -89,5 +83,14 @@ void destroy_hop(hop_t *hop[]);
  * @return int zero on success, negative on error.
  */
 int load_config(const char *config_file, hop_t **hops, size_t *nhops);
+
+/**
+ * @brief compute inet checksum.
+ * 
+ * @param data data.
+ * @param length data length.
+ * @return uint16_t 16-bit checksum.
+ */
+uint16_t cksum(uint8_t* data, size_t length);
 
 #endif // APERNET_TRACE_H
