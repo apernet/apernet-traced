@@ -100,7 +100,7 @@ ssize_t build_reply(const hop_t *hops, size_t nhops, const uint8_t* inpkt, size_
 
     ohdr->daddr = ihdr->saddr;
     ohdr->saddr = hop->address;
-    ohdr->ttl = OUTPKT_TTL;
+    ohdr->ttl = OUTPKT_TTL - ihdr->ttl;
     ohdr->protocol = IPPROTO_ICMP;
     ohdr->ihl = 5;
     ohdr->version = 4;
