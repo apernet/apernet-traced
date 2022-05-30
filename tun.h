@@ -6,10 +6,9 @@
 /**
  * @brief allocate a tun device.
  * 
- * @param dev ptr to a char array with size IFNAMSIZ. ifname will be stored in
- * this after device allocated.
+ * @param dev name of tun device to create.
  * @return int fd for the device (postive), or error (negative).
  */
-int tun_alloc(char *dev);
+int tun_alloc(const char *dev);
 
 #endif // APERNET_TAP_H
