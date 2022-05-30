@@ -9,7 +9,7 @@
 uint16_t cksum(uint8_t* data, size_t length) {
     uint32_t acc = 0xffff;
 
-    for (size_t i=0; i + 1 < length; i += 2) {
+    for (size_t i = 0; i + 1 < length; i += 2) {
         uint16_t word;
         memcpy(&word, data + i, 2);
         acc += ntohs(word);
@@ -218,7 +218,7 @@ int load_config(const char *config_file, hop_t **hops, size_t *nhops) {
                 prev->next = stack;
             }
 
-            log_debug("adding stack: l: %u, exp: %hhu, s: %hhu, ttl: %hhu; compuate val: %u\n", label, exp, s, ttl, stack->value);
+            log_debug("adding stack: l: %u, exp: %hhu, s: %hhu, ttl: %hhu; computed val: %u\n", label, exp, s, ttl, stack->value);
 
             prev = stack;
         }

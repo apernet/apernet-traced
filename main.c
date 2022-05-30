@@ -35,9 +35,9 @@ void help(char *me) {
 int main(int argc, char **argv) {
     int mode = MODE_UNDEF;
     uint8_t dst_mac[ETH_ALEN];
-    char tunifname[IFNAMSIZ];
-    char inifname[IFNAMSIZ];
-    char outifname[IFNAMSIZ];
+    char tunifname[IFNAMSIZ + 1];
+    char inifname[IFNAMSIZ + 1];
+    char outifname[IFNAMSIZ + 1];
     char *pathdef_file = NULL;
 
     int opt;

@@ -148,7 +148,8 @@ int ifname2index(const char *ifname) {
         return fd;
     }
 
-    strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
+    memset(&ifr, 0, sizeof(struct ifreq));
+    strncpy(ifr.ifr_name, ifname, IFNAMSIZ - 1);
 
     if (ioctl(fd, SIOCGIFINDEX, &ifr) < 0) {
         log_fatal("ioctl: %s\n", strerror(errno));
