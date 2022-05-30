@@ -150,6 +150,10 @@ ssize_t build_reply(const hop_t *hops, size_t nhops, const uint8_t* inpkt, size_
 
     size_t tot_len = (optr - outpkt);
 
+    if (tot_len > 0xffff) {
+        return -EPAYLOADSZ;
+    }
+
     ohdr->tot_len = htons(tot_len);
     ohdr->check = cksum(outpkt, tot_len);
 
@@ -224,6 +228,12 @@ int load_config(const char *config_file, hop_t **hops, size_t *nhops) {
 
         log_debug("loaded hop %zu.\n", _nhops);
         ++_nhops;
+
+        if (_nhops >= 255) {
+            log_fatal("too many hops defined; max 255 hops.");
+            ret = -ENUMHOPS;
+            goto end;
+        }
     }
 
     *nhops = _nhops;

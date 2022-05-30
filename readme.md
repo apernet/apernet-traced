@@ -4,8 +4,8 @@ apernet-traced
 a simple utility to fake IPv4 traceroute path with MPLS labels. to use this utility, first, create a path definition. path definition file has the following format:
 
 ```
-PATH_DEF    := HOP_IP ' ' STACK_DEF '\n'
-HOP_IP      := ipv4-address
+PATH_DEF    := HOP_DEF ['\n' PATH_DEF] ['\n']
+HOP_DEF     := ipv4-address ' ' STACK_DEF
 STACK_DEF   := LABEL_DEF [',' STACK_DEF]
 LABEL_DEF   := label-value ':' exp-value ':' s-value ':' ttl-value
 ```
