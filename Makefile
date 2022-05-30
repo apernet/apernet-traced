@@ -1,5 +1,5 @@
 CFLAGS=-O0 -g -Wall -Wextra
-OBJS=main.o trace.o tun.o
+OBJS=main.o trace.o tun.o inline.o
 
 .PHONY: all clean
 
