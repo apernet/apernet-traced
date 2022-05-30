@@ -3,7 +3,7 @@ TEST_IP='10.10.10.10'
 TUN_NAME='tun0'
 PATHDEF='path.conf.example'
 
-./traced $PATHDEF $TUN_NAME &
+./traced -Tp $PATHDEF -t $TUN_NAME &
 pid=$!
 
 sleep 1
