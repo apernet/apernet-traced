@@ -11,7 +11,7 @@
  * @param hops hop defs.
  * @param nhops number of hops.
  * 
- * @return -1 on error, or never return.
+ * @return int -1 on error, or never return.
  */
 int tun_run(const char *dev, const hop_t *hops, size_t nhops);
 
