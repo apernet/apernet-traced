@@ -1,13 +1,11 @@
 #include "tun.h"
 #include "trace.h"
 #include "log.h"
+#include "main.h"
 #include <errno.h>
 #include <string.h>
 
 int main(int argc, char **argv) {
-    size_t nhops;
-    hop_t *hops;
-
     if (argc != 3) {
         fprintf(stderr, "usage: %s <path-definition-file> <tun-interface-name>\n", argv[0]);
         fprintf(stderr, "\n");
@@ -30,44 +28,18 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    int mode = MODE_TUN;
+
+    size_t nhops;
+    hop_t *hops;
+
     if (load_config(argv[1], &hops, &nhops) < 0) {
         return 1;
     }
 
-    int fd = tun_alloc(argv[2]);
-
-    if (fd < 0) {
-        return 1;
+    if (mode == MODE_TUN) {
+        tun_run(argv[2], hops, nhops);
     }
-
-    uint8_t rbuf[0xffff];
-    uint8_t wbuf[0xffff];
-
-    while (1) {
-        ssize_t len = read(fd, rbuf, 0xffff);
-
-        if (len == 0) {
-            continue;
-        }
-
-        if (len < 0) {
-            log_error("error reading from tun device: %s\n", strerror(errno));
-        }
-
-        len = build_reply(hops, nhops, rbuf, (size_t) len, wbuf, 0xffff);
-
-        if (len <= 0) {
-            continue;
-        }
-
-        len = write(fd, wbuf, (size_t) len);
-
-        if (len < 0) {
-            log_error("error writing to tun: %s\n", strerror(errno));
-        }
-    }
-
-    close(fd);
 
     return 0;
 }

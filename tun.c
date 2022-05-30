@@ -31,3 +31,45 @@ int tun_alloc(const char *dev) {
 
     return fd;
 }
+
+int tun_run(const char *dev, const hop_t *hops, size_t nhops) {
+    int fd = tun_alloc(dev);
+
+    if (fd < 0) {
+        return -1;
+    }
+
+    uint8_t rbuf[0xffff];
+    uint8_t wbuf[0xffff];
+
+    while (1) {
+        ssize_t len = read(fd, rbuf, 0xffff);
+
+        if (len == 0) {
+            continue;
+        }
+
+        if (len < 0) {
+            log_error("error reading from tun device: %s\n", strerror(errno));
+            break;
+        }
+
+        len = build_reply(hops, nhops, rbuf, (size_t) len, wbuf, 0xffff);
+
+        if (len <= 0) {
+            continue;
+        }
+
+        len = write(fd, wbuf, (size_t) len);
+
+        if (len < 0) {
+            log_error("error writing to tun: %s\n", strerror(errno));
+        }
+    }
+
+    // should be unreached
+
+    close(fd);
+
+    return -1;
+}

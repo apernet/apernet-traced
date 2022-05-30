@@ -1,5 +1,5 @@
-#ifndef APERNET_TRACE_H
-#define APERNET_TRACE_H
+#ifndef APERNET_TRACED_H
+#define APERNET_TRACED_H
 #include <stdint.h>
 #include <unistd.h>
 #include <netinet/ip.h>
@@ -95,4 +95,4 @@ int load_config(const char *config_file, hop_t **hops, size_t *nhops);
  */
 uint16_t cksum(uint8_t* data, size_t length);
 
-#endif // APERNET_TRACE_H
+#endif // APERNET_TRACED_H
