@@ -5,14 +5,6 @@
 #include <linux/if_tun.h>
 
 /**
- * @brief allocate a tun device.
- * 
- * @param dev name of tun device to create.
- * @return int fd for the device (postive), or error (negative).
- */
-int tun_alloc(const char *dev);
-
-/**
  * @brief start traced in tun mode.
  * 
  * @param dev name of tun device.

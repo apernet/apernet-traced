@@ -6,7 +6,7 @@
 #include "tun.h"
 #include "log.h"
 
-int tun_alloc(const char *dev) {
+int tun_run(const char *dev, const hop_t *hops, size_t nhops) {
     struct ifreq ifr;
     int fd, err;
 
@@ -28,12 +28,6 @@ int tun_alloc(const char *dev) {
     }
 
     log_debug("tun device allocated on fd %d: '%s'\n", fd, ifr.ifr_name);
-
-    return fd;
-}
-
-int tun_run(const char *dev, const hop_t *hops, size_t nhops) {
-    int fd = tun_alloc(dev);
 
     if (fd < 0) {
         return -1;
