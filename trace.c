@@ -125,8 +125,11 @@ const rule_t *match(const rule_t *rules, uint32_t src, uint32_t dst) {
     const rule_t *rule = rules;
 
     while (rule != NULL) {
-        if ((rule->from & rule->from_mask) == (src & rule->from_mask) &&
-            (rule->to & rule->to_mask) == (dst & rule->to_mask)) {
+        uint32_t from_mask = htonl(rule->from_mask);
+        uint32_t to_mask = htonl(rule->to_mask);
+
+        if ((rule->from & from_mask) == (src & from_mask) &&
+            (rule->to & to_mask) == (dst & to_mask)) {
             return rule;
         }
 
