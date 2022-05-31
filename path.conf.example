@@ -1,2 +1,81 @@
-192.0.2.1 114:0:0:11,514:0:0:51,1919:0:0:191,810:0:1:81
-192.0.2.2 114:0:0:11,514:0:0:51,1919:0:0:191,810:0:1:81
+# == apernet-traced path definition file =======================================
+#
+# in apernet-traced, you define a set of rules to match on different source and
+# destination IP addresses, then define traceroute hops for them.
+# 
+# The rules evaluate from top to down. If a rule matches, the remaining rules
+# are not evaluated further. 
+
+# this rule will match all low-TTL traffic destinating 8.8.8.8/32
+rule to 8.8.8.8/32 {
+
+    # define what will be the first hop (i.e., what to reply when a TTL=1 packet
+    # is received). here, the "1.1.1.1" is the IP address of this hop. 
+    hop 1.1.1.1 {
+        # for each hop, you may also define a MPLS label stack.
+
+        # the first label in stack has value of 100.
+        label 100 {
+            # for each label, you must also set its exp, s, and ttl value.
+            exp 0;
+            s 0;
+            ttl 1;
+        }
+        
+        # instead of a literal label value, you may also have apernet-traced
+        # generates some random values for you. the value will change with each
+        # packet.
+        label random_uint(100, 200) {
+            exp 0; s 1;
+
+            # random_uint works with exp/s/ttl too.
+            ttl random_uint(1, 255);
+        }
+    }
+
+    # if you don't want a MPLS stack, just do this:
+    hop 1.0.0.1;
+
+    # and you may even use random IP for hops! random_ip() generates random IP
+    # addresses from the given range.
+    hop random_ip(10.0.0.0, 10.0.0.100) {
+        label random_uint(100, 200) { exp 0; s 1; ttl random_uint(1, 255); }
+    }
+
+    # just for fun, you may even use senders' IP address as one of the the hops.
+    hop $src {
+        label random_uint(100, 200) { exp 0; s 1; ttl 1; }
+    }
+
+    # and also dst. in some software (like mtr), this will trick the software
+    # into thinking that the packet has reached the destination.
+    hop $dst;
+}
+
+# you may also specify from address for rules, to match on the source IP.
+rule from 103.0.0.0/8 to 9.9.9.9/32 {
+    hop 2.2.2.2 {
+        label 200 { exp 0; s 1; ttl 1; }
+    }
+
+    hop $dst;
+}
+
+# or, omit the the to address, so everyone from a range will match.
+rule from 10.0.0.0/8 {
+    hop 3.3.3.3 {
+        label 300 { exp 0; s 1; ttl 1; }
+    }
+
+    hop $dst;
+}
+
+# you may also define a default rule. note that you must put default as the last
+# rule, or rules that come after it will not be evaluated.
+rule default {
+    hop 4.4.4.4 {
+        label 300 { exp 0; s 1; ttl 1; }
+    }
+
+    hop $dst;
+}
