@@ -71,6 +71,7 @@
 %token EXP
 %token S
 %token TTL
+%token DEFAULT
 
 %token <u32> IP
 %token <u32> NUMBER
@@ -105,6 +106,9 @@ selectors
         if (set_rule_to($6, $8) < 0) {
             YYERROR;
         }
+    }
+    | DEFAULT {
+        new_rule();
     }
 
 hop_list: hop | hop_list hop

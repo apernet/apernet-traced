@@ -11,6 +11,8 @@
 %%
 [ \t\n] {}
 
+\#[^\n]* {}
+
 rule {
     return RULE;
 }
@@ -21,6 +23,10 @@ from {
 
 to {
     return TO;
+}
+
+default {
+    return DEFAULT;
 }
 
 hop {
