@@ -86,7 +86,7 @@ int parse_rules(const char *filename, rule_t **rules) {
 
     FILE *f = fopen(filename, "r");
     if (!f) {
-        log_error("failed to open config file %s", filename);
+        log_fatal("failed to open config file %s", filename);
         return -1;
     }
 
