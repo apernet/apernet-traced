@@ -102,7 +102,7 @@ selectors
             YYERROR;
         }
 
-        if (set_rule_from($6, $8) < 0) {
+        if (set_rule_to($6, $8) < 0) {
             YYERROR;
         }
     }

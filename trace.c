@@ -46,6 +46,10 @@ uint32_t rand_range(uint32_t min, uint32_t max) {
 }
 
 ssize_t build_rfc4950(const stack_t* stack, uint8_t *buffer, size_t bufsz) {
+    if (stack == NULL) {
+        return 0;
+    }
+
     uint8_t *ptr = buffer;
 
     uint32_t *exthdr = (uint32_t *) ptr;
@@ -143,6 +147,10 @@ ssize_t build_reply(const rule_t *rules, const uint8_t* inpkt, size_t insz, uint
     }
 
     const rule_t *rule = match(rules, ihdr->saddr, ihdr->daddr);
+
+    if (rule == NULL) {
+        return 0;
+    }
 
     if ((size_t) (ihdr->ttl - 1) > rule->nhops) {
         return 0;
