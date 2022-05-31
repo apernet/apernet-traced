@@ -20,6 +20,14 @@
 #define ICMP_EXTYPE_MPLS_LSTACK 1
 #define MPLS_LSTACK_CTYPE_INCOMING_STACK 1
 
+#define HOP_TTPE_LITERAL 0
+#define HOP_TYPE_SRC 1
+#define HOP_TYPE_DST 2
+#define HOP_TYPE_RANDOM 3
+
+#define VAL_TYPE_LITERAL 0
+#define VAL_TYPE_RANDOM 1
+
 typedef struct iphdr iphdr_t;
 typedef struct __attribute__((__packed__)) __icmphdr {
     uint8_t type;
@@ -31,12 +39,38 @@ typedef struct __attribute__((__packed__)) __icmphdr {
 } icmphdr_t;
 
 typedef struct __stack {
-    uint32_t value;
+    uint32_t value; // to be removed
+
+    int label_type;
+    uint32_t label; // if label_type == VAL_TYPE_LITERAL
+    uint32_t label_rand_min; // if label_type == VAL_TYPE_RANDOM
+    uint32_t label_rand_max; // if label_type == VAL_TYPE_RANDOM
+
+    int exp_type;
+    uint8_t exp; // if exp_type == VAL_TYPE_LITERAL
+    uint8_t exp_rand_min; // if exp_type == VAL_TYPE_RANDOM
+    uint8_t exp_rand_max; // if exp_type == VAL_TYPE_RANDOM
+
+    int s_type;
+    uint8_t s; // if s_type == VAL_TYPE_LITERAL
+    uint8_t s_rand_min; // if s_type == VAL_TYPE_RANDOM
+    uint8_t s_rand_max; // if s_type == VAL_TYPE_RANDOM
+
+    int ttl_type;
+    uint8_t ttl; // if ttl_type == VAL_TYPE_LITERAL
+    uint8_t ttl_rand_min; // if ttl_type == VAL_TYPE_RANDOM
+    uint8_t ttl_rand_max; // if ttl_type == VAL_TYPE_RANDOM
+
     struct __stack *next;
 } stack_t;
 
 typedef struct __hop {
-    uint32_t address;
+    int type; // HOP_TYPE_*
+
+    uint32_t address; // if type == HOP_TYPE_LITERAL
+    uint32_t address_rand_min; // if type == HOP_TYPE_RANDOM
+    uint32_t address_rand_max; // if type == HOP_TYPE_RANDOM
+
     stack_t *stack;
 } hop_t;
 
@@ -46,6 +80,7 @@ typedef struct __rule {
     uint32_t to;
     uint32_t to_mask;
     hop_t *hops;
+    size_t nhops;
 
     struct __rule *next;
 } rule_t;

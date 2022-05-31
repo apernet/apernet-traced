@@ -1,4 +1,5 @@
 %{
+    #include <arpa/inet.h>
     #include "config.tab.h"
 %}
 
@@ -43,15 +44,21 @@ ttl {
 }
 
 ([0-9]{1,3}\.){3}[0-9]{1,3} {
+    yylval.u32 = inet_addr(yytext);
     return IP;
 }
 
 [0-9]+ {
+    yylval.u32 = atoi(yytext);
     return NUMBER;
 }
 
-\$random {
-    return RANDOM;
+random_ip {
+    return RANDOM_IP;
+}
+
+random_uint {
+    return RANDOM_UINT;
 }
 
 \$src {
@@ -76,6 +83,18 @@ ttl {
 
 \; {
     return SEMICOLON;
+}
+
+\( {
+    return LPAREN;
+}
+
+\) {
+    return RPAREN;
+}
+
+, {
+    return COMMA;
 }
 
 %%
