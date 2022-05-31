@@ -35,10 +35,20 @@ typedef struct __stack {
     struct __stack *next;
 } stack_t;
 
-typedef struct hop {
+typedef struct __hop {
     uint32_t address;
     stack_t *stack;
 } hop_t;
+
+typedef struct __rule {
+    uint32_t from;
+    uint32_t from_mask;
+    uint32_t to;
+    uint32_t to_mask;
+    hop_t *hops;
+
+    struct __rule *next;
+} rule_t;
 
 typedef struct __attribute__((__packed__)) __icmp_ext_obj_hdr {
     uint16_t length;
