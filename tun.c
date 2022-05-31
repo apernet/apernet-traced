@@ -6,7 +6,7 @@
 #include "tun.h"
 #include "log.h"
 
-int tun_run(const char *dev, const hop_t *hops, size_t nhops) {
+int tun_run(const char *dev, const rule_t *rules) {
     struct ifreq ifr;
     int fd, err;
 
@@ -48,7 +48,7 @@ int tun_run(const char *dev, const hop_t *hops, size_t nhops) {
             break;
         }
 
-        len = build_reply(hops, nhops, rbuf, (size_t) len, wbuf, 0xffff);
+        len = build_reply(rules, rbuf, (size_t) len, wbuf, 0xffff);
 
         if (len <= 0) {
             continue;

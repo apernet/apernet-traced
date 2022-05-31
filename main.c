@@ -3,6 +3,9 @@
 #include "log.h"
 #include "main.h"
 #include "inline.h"
+#include "config.h"
+#include <stdlib.h>
+#include <time.h>
 #include <errno.h>
 #include <string.h>
 #include <netinet/ether.h>
@@ -13,23 +16,8 @@ void help(char *me) {
     fprintf(stderr, "\n");
     fprintf(stderr, "modes:\n");
     fprintf(stderr, " -T: tun mode - traffic needs to be routed into the tun interface.\n");
-    fprintf(stderr, " -I: inline mode - sniff low-ttl traffic from IN_IFNAME, and sends reply to DST_MAC on OUT_IFNAME.\n");
-    fprintf(stderr, "\n");
-    fprintf(stderr, "PATHDEF file format:\n");
-    fprintf(stderr, "  hop-1-ip LABEL_1[,LABEL_2[,LABEL_N ...]]\n");
-    fprintf(stderr, "  hop-2-ip LABEL_1[,LABEL_2[,LABEL_N ...]]\n");
-    fprintf(stderr, "  ...\n");
-    fprintf(stderr, "\n");
-    fprintf(stderr, "where the format of LABEL_* is:\n");
-    fprintf(stderr, "  label:exp:s:ttl\n");
-    fprintf(stderr, "\n");
-    fprintf(stderr, "for example, this file:\n");
-    fprintf(stderr, "  192.0.2.1 114:0:0:11,514:0:0:51,1919:0:0:191,810:0:1:81\n");
-    fprintf(stderr, "  192.0.2.2 114:0:0:11,514:0:0:51,1919:0:0:191,810:0:1:81\n");
-    fprintf(stderr, "\n");
-    fprintf(stderr, "generates this traceroute:\n");
-    fprintf(stderr, " 1  192.0.2.1 (192.0.2.1) <MPLS:L=114,E=0,S=0,T=11/L=514,E=0,S=0,T=51/L=1919,E=0,S=0,T=191/L=810,E=0,S=1,T=81>  0.124 ms  0.116 ms  0.114 ms\n");
-    fprintf(stderr, " 2  192.0.2.2 (192.0.2.2) <MPLS:L=114,E=0,S=0,T=11/L=514,E=0,S=0,T=51/L=1919,E=0,S=0,T=191/L=810,E=0,S=1,T=81>  0.112 ms  0.109 ms  0.108 ms\n");
+    fprintf(stderr, " -I: inline mode - sniff low-ttl traffic from IN_IFNAME, and sends reply to\n");
+    fprintf(stderr, "     DST_MAC on OUT_IFNAME.\n");
 }
 
 int main(int argc, char **argv) {
@@ -39,6 +27,9 @@ int main(int argc, char **argv) {
     char inifname[IFNAMSIZ + 1];
     char outifname[IFNAMSIZ + 1];
     char *pathdef_file = NULL;
+
+    // to be used by various rand values
+    srand(time(NULL));
 
     int opt;
     int iif_set = 0, oif_set = 0, tif_set = 0, dmac_set = 0;
@@ -76,15 +67,14 @@ int main(int argc, char **argv) {
         }
     }
 
-    size_t nhops;
-    hop_t *hops;
+    rule_t *rules;
 
     if (pathdef_file == NULL) {
         help(argv[0]);
         return 1;
     }
 
-    if (load_config(pathdef_file, &hops, &nhops) < 0) {
+    if (parse_rules(pathdef_file, &rules) < 0) {
         return 1;
     }
 
@@ -95,7 +85,8 @@ int main(int argc, char **argv) {
         }
 
         log_info("starting tun mode on interface %s\n", tunifname);
-        tun_run(tunifname, hops, nhops);
+        
+        tun_run(tunifname, rules);
     } else if (mode == MODE_INLINE) {
         if (!iif_set || !oif_set || !dmac_set) {
             help(argv[0]);
@@ -104,7 +95,7 @@ int main(int argc, char **argv) {
 
         log_info("starting inline mode: in interface %s, out interface %s, target mac: %s\n", inifname, outifname, ether_ntoa((struct ether_addr *) dst_mac));
 
-        inline_run(inifname, outifname, dst_mac, hops, nhops);
+        inline_run(inifname, outifname, dst_mac, rules);
     } else {
         help(argv[0]);
     }

@@ -8,11 +8,10 @@
  * @brief start traced in tun mode.
  * 
  * @param dev name of tun device.
- * @param hops hop defs.
- * @param nhops number of hops.
+ * @param rules reply rules.
  * 
  * @return int -1 on error, or never return.
  */
-int tun_run(const char *dev, const hop_t *hops, size_t nhops);
+int tun_run(const char *dev, const rule_t *rules);
 
 #endif // APERNET_TRACED_TUN_H

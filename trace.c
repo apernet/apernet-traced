@@ -30,6 +30,21 @@ uint16_t cksum(uint8_t* data, size_t length) {
     return htons(~acc);
 }
 
+uint32_t rand_range(uint32_t min, uint32_t max) {
+    if (min >= max) {
+        return min;
+    }
+
+    uint32_t range = max - min;
+
+    uint32_t val = rand() & 0xff;
+    val |= (rand() & 0xff) << 8;
+    val |= (rand() & 0xff) << 16;
+    val |= (rand() & 0xff) << 24;
+
+    return min + (val % range);
+}
+
 ssize_t build_rfc4950(const stack_t* stack, uint8_t *buffer, size_t bufsz) {
     uint8_t *ptr = buffer;
 
@@ -55,17 +70,45 @@ ssize_t build_rfc4950(const stack_t* stack, uint8_t *buffer, size_t bufsz) {
     ptr += sizeof(icmp_ext_obj_hdr_t);
 
     size_t lse_count = 0;
-    const stack_t *s = stack;
+    const stack_t *l = stack;
 
-    while (s != NULL) {
-        if ((ptr - buffer) + sizeof(s->value) > bufsz) {
+    uint32_t label;
+    uint8_t exp;
+    uint8_t s;
+    uint8_t ttl;
+
+    while (l != NULL) {
+        label = l->label;
+        exp = l->exp;
+        s = l->s;
+        ttl = l->ttl;
+
+        if (l->label_type == VAL_TYPE_RANDOM) {
+            label = rand_range(l->label_rand_min, l->label_rand_max);
+        }
+
+        if (l->s_type == VAL_TYPE_RANDOM) {
+            s = rand_range(l->s_rand_min, l->s_rand_max);
+        }
+
+        if (l->exp_type == VAL_TYPE_RANDOM) {
+            exp = rand_range(l->exp_rand_min, l->exp_rand_max);
+        }
+
+        if (l->ttl_type == VAL_TYPE_RANDOM) {
+            ttl = rand_range(l->ttl_rand_min, l->ttl_rand_max);
+        }
+
+        if ((ptr - buffer) + sizeof(uint32_t) > bufsz) {
             return -EBUFOSZ;
         }
 
-        memcpy(ptr, &(s->value), sizeof(s->value));
-        ptr += sizeof(s->value);
+        uint32_t value = htonl(label << 12 | exp << 9 | s << 8 | ttl);
 
-        s = s->next;
+        memcpy(ptr, &(value), sizeof(uint32_t));
+        ptr += sizeof(uint32_t);
+
+        l = l->next;
         ++lse_count;
     }
 
@@ -74,7 +117,22 @@ ssize_t build_rfc4950(const stack_t* stack, uint8_t *buffer, size_t bufsz) {
     return (ptr - buffer);
 }
 
-ssize_t build_reply(const hop_t *hops, size_t nhops, const uint8_t* inpkt, size_t insz, uint8_t *outpkt, size_t outsz) {
+const rule_t *match(const rule_t *rules, uint32_t src, uint32_t dst) {
+    const rule_t *rule = rules;
+
+    while (rule != NULL) {
+        if ((rule->from & rule->from_mask) == (src & rule->from_mask) &&
+            (rule->to & rule->to_mask) == (dst & rule->to_mask)) {
+            return rule;
+        }
+
+        rule = rule->next;
+    }
+
+    return NULL;
+}
+
+ssize_t build_reply(const rule_t *rules, const uint8_t* inpkt, size_t insz, uint8_t *outpkt, size_t outsz) {
     uint8_t *optr = outpkt;
     const uint8_t *iptr = inpkt;
 
@@ -84,11 +142,13 @@ ssize_t build_reply(const hop_t *hops, size_t nhops, const uint8_t* inpkt, size_
         return -EBUFISZ;
     }
 
-    if ((size_t) (ihdr->ttl - 1) > nhops) {
+    const rule_t *rule = match(rules, ihdr->saddr, ihdr->daddr);
+
+    if ((size_t) (ihdr->ttl - 1) > rule->nhops) {
         return 0;
     }
 
-    const hop_t *hop = &(hops[ihdr->ttl - 1]);
+    const hop_t *hop = &(rule->hops[ihdr->ttl - 1]);
 
     iphdr_t *ohdr = (iphdr_t *) optr;
     
@@ -104,6 +164,14 @@ ssize_t build_reply(const hop_t *hops, size_t nhops, const uint8_t* inpkt, size_
     ohdr->protocol = IPPROTO_ICMP;
     ohdr->ihl = 5;
     ohdr->version = 4;
+
+    if (hop->type == HOP_TYPE_RANDOM) {
+        ohdr->saddr = htonl(rand_range(ntohl(hop->address_rand_min), ntohl(hop->address_rand_max)));
+    } else if (hop->type == HOP_TYPE_SRC) {
+        ohdr->saddr = ihdr->saddr;
+    } else if (hop->type == HOP_TYPE_DST) {
+        ohdr->saddr = ihdr->daddr;
+    }
 
     optr += sizeof(iphdr_t);
 
@@ -158,89 +226,4 @@ ssize_t build_reply(const hop_t *hops, size_t nhops, const uint8_t* inpkt, size_
     ohdr->check = cksum(outpkt, tot_len);
 
     return tot_len;
-}
-
-int load_config(const char *config_file, hop_t **hops, size_t *nhops) {
-    size_t ln = 0;
-    int ret = 0;
-
-    FILE *file = fopen(config_file, "r");
-
-    if (file == NULL) {
-        log_fatal("failed opening '%s': %s\n", config_file, strerror(errno));
-        return -errno - 100;
-    }
-
-    char *addr = (char *) malloc(INET_ADDRSTRLEN);
-    char *stacksdef = (char *) malloc(2048);
-    
-    hop_t *_hops = calloc(255, sizeof(hop_t));
-    size_t _nhops = 0;
-
-    *hops = _hops;
-    
-    while (fscanf(file, "%16s %2048s", addr, stacksdef) == 2) {
-        log_debug("input hop %zu: %s, input stack: %s\n", ln, addr, stacksdef);
-        
-        ++ln;
-        stack_t *prev = NULL, *head = NULL;
-
-        uint32_t label;
-        uint8_t exp;
-        uint8_t s;
-        uint8_t ttl;
-
-        char *saveptr = NULL, *stackdef = NULL;
-
-        for (stackdef = strtok_r(stacksdef, ",", &saveptr); ; stackdef = strtok_r(NULL, ",", &saveptr)) {
-            if (stackdef == NULL) {
-                if (head == NULL) {
-                    log_fatal("no stack defined for hop %s\n", addr);
-                    ret = -EPARSE;
-                    goto end;
-                }
-
-                log_debug("end building stack for hop %s.\n", addr);
-                break;
-            }
-
-            sscanf(stackdef, "%u:%hhu:%hhu:%hhu", &label, &exp, &s, &ttl);
-
-            stack_t *stack = (stack_t *) malloc(sizeof(stack_t));
-            stack->value = htonl(label << 12 | exp << 9 | s << 8 | ttl);
-            stack->next = NULL;
-
-            if (head == NULL) {
-                head = stack;
-            }
-
-            if (prev != NULL) {
-                prev->next = stack;
-            }
-
-            log_debug("adding stack: l: %u, exp: %hhu, s: %hhu, ttl: %hhu; computed val: %u\n", label, exp, s, ttl, stack->value);
-
-            prev = stack;
-        }
-
-        _hops[_nhops].address = inet_addr(addr);
-        _hops[_nhops].stack = head;
-
-        log_debug("loaded hop %zu.\n", _nhops);
-        ++_nhops;
-
-        if (_nhops >= 255) {
-            log_fatal("too many hops defined; max 255 hops.");
-            ret = -ENUMHOPS;
-            goto end;
-        }
-    }
-
-    *nhops = _nhops;
-
-end:
-    free(addr);
-    free(stacksdef);
-    fclose(file);
-    return ret;
 }

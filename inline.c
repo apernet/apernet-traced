@@ -9,7 +9,7 @@
 #include <sys/ioctl.h>
 #include <linux/if_packet.h>
 
-int inline_run(const char *in_ifname, const char *out_ifname, const uint8_t *ether_dst, const hop_t *hops, size_t nhops) {
+int inline_run(const char *in_ifname, const char *out_ifname, const uint8_t *ether_dst, const rule_t *rules) {
     int rfd, wfd, retval = 0;
 
     rfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_IP));
@@ -118,7 +118,7 @@ int inline_run(const char *in_ifname, const char *out_ifname, const uint8_t *eth
 
         uint8_t *rptr = (uint8_t *) (rbuf + sizeof(struct ether_header));
 
-        len = build_reply(hops, nhops, rptr, (size_t) len, wptr, 0xffff);
+        len = build_reply(rules, rptr, (size_t) len, wptr, 0xffff);
 
         if (len <= 0) {
             continue;

@@ -8,13 +8,12 @@
  * @param in_ifname interface to monitor low-ttl packet on.
  * @param out_ifname interface to send out icmp msgs.
  * @param ether_dst dst mac for outgoint packets.
- * @param hops hop defs.
- * @param nhops number of hops.
+ * @param rules reply rules.
  * 
  * @return int -1 on error, or never return.
  */
 int inline_run(const char *in_ifname, const char *out_ifname,
-    const uint8_t *ether_dst, const hop_t *hops, size_t nhops);
+    const uint8_t *ether_dst, const rule_t *rules);
 
 /**
  * @brief get interface index by name.

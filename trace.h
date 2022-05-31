@@ -39,8 +39,6 @@ typedef struct __attribute__((__packed__)) __icmphdr {
 } icmphdr_t;
 
 typedef struct __stack {
-    uint32_t value; // to be removed
-
     int label_type;
     uint32_t label; // if label_type == VAL_TYPE_LITERAL
     uint32_t label_rand_min; // if label_type == VAL_TYPE_RANDOM
@@ -104,15 +102,24 @@ ssize_t build_rfc4950(const stack_t* stack, uint8_t *buffer, size_t bufsz);
 /**
  * @brief construct icmp reply from incoming packet.
  * 
- * @param hops hops config.
- * @param nhops hops count.
+ * @param rules reply rules.
  * @param inpkt incoming packet.
  * @param insz incoming packet size.
  * @param outpkt buffer for outgoing packet.
  * @param outsz buffer size.
  * @return ssize_t  bytes written (postive), zero (noting to reply), or error code (negative).
  */
-ssize_t build_reply(const hop_t *hops, size_t nhops, const uint8_t* inpkt, size_t insz, uint8_t *outpkt, size_t outsz);
+ssize_t build_reply(const rule_t *rules, const uint8_t* inpkt, size_t insz, uint8_t *outpkt, size_t outsz);
+
+/**
+ * @brief find matching rule for incoming packet.
+ * 
+ * @param rules rules to search.
+ * @param src source address.
+ * @param dst destination address.
+ * @return const rule_t* rule, or NULL if no match.
+ */
+const rule_t *match(const rule_t *rules, uint32_t src, uint32_t dst);
 
 /**
  * @brief destroy hop struct.
@@ -122,16 +129,6 @@ ssize_t build_reply(const hop_t *hops, size_t nhops, const uint8_t* inpkt, size_
 void destroy_hop(hop_t *hop[]);
 
 /**
- * @brief load hop configuration from file.
- * 
- * @param config_file path to the config file to load hops from.
- * @param hops ptr to array of hop; hops. destroy with destroy_hop() when done working with it.
- * @param nhops ptr to size_t; will store number of hops defined.
- * @return int zero on success, negative on error.
- */
-int load_config(const char *config_file, hop_t **hops, size_t *nhops);
-
-/**
  * @brief compute inet checksum.
  * 
  * @param data data.
@@ -139,5 +136,14 @@ int load_config(const char *config_file, hop_t **hops, size_t *nhops);
  * @return uint16_t 16-bit checksum.
  */
 uint16_t cksum(uint8_t* data, size_t length);
+
+/**
+ * @brief generate random number in range.
+ * 
+ * @param min minimum value.
+ * @param max maximum value.
+ * @return uint32_t random number.
+ */
+uint32_t rand_range(uint32_t min, uint32_t max);
 
 #endif // APERNET_TRACED_H
